@@ -2,6 +2,7 @@ using System.Collections;
 using App.Contracts.DAL;
 using App.Domain.Identity;
 using App.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace WebApp.ApiControllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(Roles = "admin")]
 public class StatisticsController : Controller
 {
     private readonly IAppUnitOfWork _uow;
