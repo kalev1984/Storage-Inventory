@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace App.DAL.EF.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20220324214806_InitialMigration")]
+    [Migration("20220326204451_InitialMigration")]
     partial class InitialMigration
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -122,6 +122,9 @@ namespace App.DAL.EF.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("AppUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<byte[]>("Bytes")
                         .IsRequired()
                         .HasColumnType("bytea");
@@ -133,6 +136,8 @@ namespace App.DAL.EF.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppUserId");
+
                     b.ToTable("Images");
                 });
 
@@ -140,6 +145,9 @@ namespace App.DAL.EF.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AppUserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Color")
@@ -169,6 +177,8 @@ namespace App.DAL.EF.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AppUserId");
+
                     b.HasIndex("ImageId");
 
                     b.ToTable("Items");
@@ -178,6 +188,9 @@ namespace App.DAL.EF.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AppUserId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("ItemId")
@@ -192,6 +205,8 @@ namespace App.DAL.EF.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
 
                     b.HasIndex("ItemId");
 
@@ -303,18 +318,43 @@ namespace App.DAL.EF.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("App.Domain.Image", b =>
+                {
+                    b.HasOne("App.Domain.Identity.AppUser", "AppUser")
+                        .WithMany("Images")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AppUser");
+                });
+
             modelBuilder.Entity("App.Domain.Item", b =>
                 {
+                    b.HasOne("App.Domain.Identity.AppUser", "AppUser")
+                        .WithMany("Items")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("App.Domain.Image", "Image")
                         .WithMany("Items")
                         .HasForeignKey("ImageId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AppUser");
 
                     b.Navigation("Image");
                 });
 
             modelBuilder.Entity("App.Domain.StorageLevel", b =>
                 {
+                    b.HasOne("App.Domain.Identity.AppUser", "AppUser")
+                        .WithMany("StorageLevels")
+                        .HasForeignKey("AppUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("App.Domain.Item", "Item")
                         .WithMany("StorageLevels")
                         .HasForeignKey("ItemId")
@@ -324,6 +364,8 @@ namespace App.DAL.EF.Migrations
                         .WithMany()
                         .HasForeignKey("ParentStorageLevelId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AppUser");
 
                     b.Navigation("Item");
 
@@ -379,6 +421,15 @@ namespace App.DAL.EF.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("App.Domain.Identity.AppUser", b =>
+                {
+                    b.Navigation("Images");
+
+                    b.Navigation("Items");
+
+                    b.Navigation("StorageLevels");
                 });
 
             modelBuilder.Entity("App.Domain.Image", b =>

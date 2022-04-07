@@ -1,10 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using App.Domain.Identity;
 using Base.Domain;
 
-namespace App.Domain;
+namespace App.DTO;
 
-public class Item : DomainEntityIdAppUserId
+public class ItemDto : DomainEntityId<Guid>
 {
     [MaxLength(50)]
     public string Title { get; set; } = default!;
@@ -22,9 +21,6 @@ public class Item : DomainEntityIdAppUserId
     public string Comment { get; set; } = default!;
 
     public Guid? ImageId { get; set; }
-    public Image? Image { get; set; }
 
-    public AppUser? AppUser { get; set; }
-
-    public ICollection<StorageLevel>? StorageLevels { get; set; }
+    public Guid? AppUserId { get; set; }
 }

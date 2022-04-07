@@ -1,57 +1,66 @@
-using App.DAL.EF;
-using App.Domain;
+using App.Contracts.DAL;
+using App.DTO;
+using App.DTO.Mappers;
+using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebApp.Helpers;
 
 namespace WebApp.ApiControllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class StorageLevelsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IAppUnitOfWork _uow;
+    private readonly StorageLevelMapper _mapper;
 
-    public StorageLevelsController(AppDbContext context)
+    public StorageLevelsController(IMapper mapper, IAppUnitOfWork uow)
     {
-        _context = context;
+        _mapper = new StorageLevelMapper(mapper);
+        _uow = uow;
     }
     
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<StorageLevel>>> GetStorageLevels()
+    public async Task<IEnumerable<StorageLevelDto>> GetStorageLevels()
     {
-        return await _context.StorageLevels.ToListAsync();
+        var storageLevels = await _uow.StorageLevels.GetAllAsync(User.GetUserId()!.Value);
+        return storageLevels.Select(storageLevel => _mapper.Map(storageLevel)).ToList()!;
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<StorageLevel>> GetStorageLevel(Guid id)
+    public async Task<ActionResult<StorageLevelDto>> GetStorageLevel(Guid id)
     {
-        var storageLevel = await _context.StorageLevels.FindAsync(id);
+        var storageLevel = await _uow.StorageLevels.FirstOrDefaultAsync(id, User.GetUserId()!.Value);
 
         if (storageLevel == null)
         {
             return NotFound();
         }
 
-        return storageLevel;
+        return _mapper.Map(storageLevel)!;
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> PutStorageLevel(Guid id, StorageLevel storageLevel)
+    public async Task<IActionResult> PutStorageLevel(Guid id, StorageLevelDto storageLevel)
     {
         if (id != storageLevel.Id)
         {
             return BadRequest();
         }
 
-        _context.Entry(storageLevel).State = EntityState.Modified;
+        _uow.StorageLevels.Update(_mapper.Map(storageLevel)!);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!StorageLevelExists(id))
+            if (!await StorageLevelExists(id))
             {
                 return NotFound();
             }
@@ -65,10 +74,10 @@ public class StorageLevelsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<StorageLevel>> PostAssortmentLevel(StorageLevel storageLevel)
+    public async Task<ActionResult<StorageLevelDto>> PostAssortmentLevel(StorageLevelDto storageLevel)
     {
-        _context.StorageLevels.Add(storageLevel);
-        await _context.SaveChangesAsync();
+        _uow.StorageLevels.Add(_mapper.Map(storageLevel)!);
+        await _uow.SaveChangesAsync();
 
         return CreatedAtAction("GetStorageLevel", new { id = storageLevel.Id }, storageLevel);
     }
@@ -76,20 +85,14 @@ public class StorageLevelsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteStorageLevel(Guid id)
     {
-        var storageLevel = await _context.StorageLevels.FindAsync(id);
-        if (storageLevel == null)
-        {
-            return NotFound();
-        }
-
-        _context.StorageLevels.Remove(storageLevel);
-        await _context.SaveChangesAsync();
+        await _uow.StorageLevels.RemoveAsync(id, User.GetUserId()!.Value);
+        await _uow.SaveChangesAsync();
 
         return NoContent();
     }
 
-    private bool StorageLevelExists(Guid id)
+    private async Task<bool> StorageLevelExists(Guid id)
     {
-        return _context.StorageLevels.Any(e => e.Id == id);
+        return await _uow.StorageLevels.ExistsAsync(id, User.GetUserId()!.Value);
     }
 }

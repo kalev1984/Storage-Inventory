@@ -1,58 +1,66 @@
-#nullable disable
-using App.DAL.EF;
-using App.Domain;
+using App.Contracts.DAL;
+using App.DTO;
+using App.DTO.Mappers;
+using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebApp.Helpers;
 
 namespace WebApp.ApiControllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class ImagesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly IAppUnitOfWork _uow;
+    private readonly ImageMapper _mapper;
 
-    public ImagesController(AppDbContext context)
+    public ImagesController(IAppUnitOfWork uow, IMapper mapper)
     {
-        _context = context;
+        _uow = uow;
+        _mapper = new ImageMapper(mapper);
     }
     
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Image>>> GetImages()
+    public async Task<IEnumerable<ImageDto>> GetImages()
     {
-        return await _context.Images.ToListAsync();
+        var images = await _uow.Images.GetAllAsync(User.GetUserId()!.Value);
+        return images.Select(image => _mapper.Map(image)).ToList()!;
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Image>> GetImage(Guid id)
+    public async Task<ActionResult<ImageDto>> GetImage(Guid id)
     {
-        var image = await _context.Images.FindAsync(id);
+        var image = await _uow.Images.FirstOrDefaultAsync(id, User.GetUserId()!.Value);
 
         if (image == null)
         {
             return NotFound();
         }
 
-        return image;
+        return _mapper.Map(image)!;
     }
     
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> PutImage(Guid id, Image image)
+    public async Task<IActionResult> PutImage(Guid id, ImageDto image)
     {
         if (id != image.Id)
         {
             return BadRequest();
         }
 
-        _context.Entry(image).State = EntityState.Modified;
+        _uow.Images.Update(_mapper.Map(image)!);
 
         try
         {
-            await _context.SaveChangesAsync();
+            await _uow.SaveChangesAsync();
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!ImageExists(id))
+            if (!await ImageExists(id))
             {
                 return NotFound();
             }
@@ -66,10 +74,10 @@ public class ImagesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Image>> PostImage(Image image)
+    public async Task<ActionResult<ImageDto>> PostImage(ImageDto image)
     {
-        _context.Images.Add(image);
-        await _context.SaveChangesAsync();
+        _uow.Images.Add(_mapper.Map(image)!);
+        await _uow.SaveChangesAsync();
 
         return CreatedAtAction("GetImage", new { id = image.Id }, image);
     }
@@ -77,20 +85,20 @@ public class ImagesController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteImage(Guid id)
     {
-        var image = await _context.Images.FindAsync(id);
+        var image = await _uow.Images.FirstOrDefaultAsync(id, User.GetUserId()!.Value);
         if (image == null)
         {
             return NotFound();
         }
 
-        _context.Images.Remove(image);
-        await _context.SaveChangesAsync();
+        _uow.Images.Remove(image, User.GetUserId()!.Value);
+        await _uow.SaveChangesAsync();
 
         return NoContent();
     }
 
-    private bool ImageExists(Guid id)
+    private async Task<bool> ImageExists(Guid id)
     {
-        return _context.Images.Any(e => e.Id == id);
+        return await _uow.Images.ExistsAsync(id, User.GetUserId()!.Value);
     }
 }

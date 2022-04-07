@@ -50,19 +50,6 @@ namespace App.DAL.EF.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Images",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ImageName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    Bytes = table.Column<byte[]>(type: "bytea", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Images", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -169,6 +156,26 @@ namespace App.DAL.EF.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Images",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ImageName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Bytes = table.Column<byte[]>(type: "bytea", nullable: false),
+                    AppUserId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Images", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Images_AspNetUsers_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Items",
                 columns: table => new
                 {
@@ -178,11 +185,18 @@ namespace App.DAL.EF.Migrations
                     Color = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     Comment = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    ImageId = table.Column<Guid>(type: "uuid", nullable: true)
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AppUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Items", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Items_AspNetUsers_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Items_Images_ImageId",
                         column: x => x.ImageId,
@@ -198,11 +212,18 @@ namespace App.DAL.EF.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     LevelName = table.Column<string>(type: "character varying(25)", maxLength: 25, nullable: false),
                     ParentStorageLevelId = table.Column<Guid>(type: "uuid", nullable: true),
-                    ItemId = table.Column<Guid>(type: "uuid", nullable: true)
+                    ItemId = table.Column<Guid>(type: "uuid", nullable: true),
+                    AppUserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_StorageLevels", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StorageLevels_AspNetUsers_AppUserId",
+                        column: x => x.AppUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_StorageLevels_Items_ItemId",
                         column: x => x.ItemId,
@@ -255,9 +276,24 @@ namespace App.DAL.EF.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Images_AppUserId",
+                table: "Images",
+                column: "AppUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Items_AppUserId",
+                table: "Items",
+                column: "AppUserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Items_ImageId",
                 table: "Items",
                 column: "ImageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_StorageLevels_AppUserId",
+                table: "StorageLevels",
+                column: "AppUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StorageLevels_ItemId",
@@ -294,13 +330,13 @@ namespace App.DAL.EF.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
                 name: "Items");
 
             migrationBuilder.DropTable(
                 name: "Images");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }
